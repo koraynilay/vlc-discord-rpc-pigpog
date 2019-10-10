@@ -2,14 +2,15 @@
  * @description This module handles the interaction with VLC, all communication is done here. it
  * requires the module vlc.js which creates http requests to the mini http server that VLC
  * hosts. For us to update the users presence we must do it based on difference basically whether
- * or not the status of the VLC media player has changed. *
+ * or not the status of the VLC media player has changed.
  * @author Dylan Hackworth <https://github.com/dylhack>
  * @author Jared Toomey <https://github.com/pigpog>
  */
+import * as fs                  from 'fs';
+import * as rl                  from 'readline';
 import { editVLCRC, VLCClient } from 'vlc.js';
 import { VLCError }             from 'vlc.js/lib/src/http/classes/VLCError';
 import { Meta, VLCStatus }      from 'vlc.js/lib/src/http/classes/VLCStatus';
-import { VLCCredentials }       from 'vlc.js/lib/src/http/Requester';
 import { ConfigItem }           from 'vlc.js/lib/src/util/VLCRCModifier';
 
 const config = require(`${__dirname}/../config/config.json`);
@@ -19,7 +20,8 @@ const log = console.log;
 type DifferenceCallback = (status: VLCStatus, difference: boolean) => void;
 type ErrorCodes = 'EACCES' | 'EADDRINUSE' | 'ECONNREFUSED' | 'ECONNRESET' | 'EEXIST' | 'EISDIR'
     | 'EMFILE' | 'ENOENT' | 'ENOTDIR' | 'ENOTEMPTY' | 'ENOTFOUND' | 'EPERM' | 'EPIPE' | 'ETIMEDOUT';
-type SystemError = {
+
+interface SystemError extends Error {
     address: string;
     code: ErrorCodes;
     dest: string;
@@ -118,26 +120,52 @@ export function getPassword(): string | undefined {
  * This function handles errors that the user may run into while interacting with VLC's http
  * server. For all the errors that may appear see the following link.
  * @link https://nodejs.org/docs/latest-v11.x/api/errors.html#errors_common_system_errors
- * @param e
+ * @param error
  */
-export function handleError(e: SystemError | VLCError | Error): void {
-    let sysError: SystemError;
+export function handleError(error: VLCError | Error | SystemError): void {
+    let stringified: string;
+    let rlInterface: rl.Interface;
+    let result: string | undefined;
+    let tried = false;
 
-    if (e instanceof Error) {
-        console.log(`An error occurred: ${e.message}`);
-    }
-    if (e instanceof VLCError) {
-        console.log(`Failed to connect to VLC, is the password correct? ${e.message}`);
-    } else {
-        sysError = e as SystemError;
-        if (sysError.code === 'ECONNREFUSED') {
-            console.log(`Failed to connect, is VLC running? ${sysError.code}`);
+    if (error instanceof VLCError) {
+        if (tried) {
+            console.log(`Failed to connect to VLC is the HTTP server on?`);
         } else {
-            console.log(`An unhandled error occurred: ${e.message}`);
+            result = setup();
+            if (result === undefined) {
+                // prompt for password
+                rlInterface = rl.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                rlInterface.question('Enter your VLC HTTP password: ',
+                    (answer: string) => {
+                        config.vlc.password = answer;
+                        stringified = JSON.stringify(config);
+                        fs.writeFileSync(
+                            `${__dirname}/../config/config.json`, stringified
+                        );
+                    });
+                client.update(config.vlc);
+            }
         }
+    } else if (error instanceof Error) {
+        console.log(`Unhandled error contact devs: (Error: ${error.message})`);
+    } else {
+        console.log(`Failed to connect to VLC, is it open?`);
     }
 }
 
-export function update(details: VLCCredentials) {
-    client.update(details);
+function setup(): string | undefined {
+    let stringifed: string;
+    let password: string | undefined;
+
+    password = getPassword();
+    if (password) {
+        config.vlc.password = password;
+        stringifed = JSON.stringify(config);
+        fs.writeFileSync(`${__dirname}/../config/config.json`, stringifed);
+    }
+    return password;
 }

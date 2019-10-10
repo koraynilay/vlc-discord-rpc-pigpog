@@ -5,7 +5,7 @@
     "sleepTime": 30000
   },
   "vlc": {
-    "password": "",
+    "password": "password",
     "port": 8080,
     "address": "localhost"
   }

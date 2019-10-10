@@ -49,74 +49,99 @@ export async function update() {
     })
 }
 
+// NOTE: Any property in the meta object of VLCStatus can be undefined, the one property that
+// will almost always be defined is filename. Meta data is never consistent some meta data has
+// both the author and the song name in the title while others have every property filled out and we
+// must work with that.
 function format(status: VLCStatus): Presence {
-    let end: number;
     let meta: any & Meta;
-    let output: Presence = {};
+    let output: Presence = {
+        smallImageKey: status.state,
+        smallImageText: `Volume: ${Math.round(status.volume / 2.56)}%`
+    };
 
     // if playback is stopped
     if (status.state === 'stopped') {
         return {
-            state: 'Stopped',
+            ...output,
+            state: 'stopped',
             details: 'Nothing is playing.',
-            largeImageKey: 'vlc',
-            smallImageKey: 'stopped',
-            instance: true,
+            instance: true
         };
-    }
-
-    if (status.information) {
-        meta = status.information.category.meta;
-        return {
-            details: meta.title || meta.filename,
-            largeImageKey: 'vlc',
-            smallImageKey: status.state,
-            smallImageText: `Volume: ${Math.round(status.volume / 2.56)}%`,
-            instance: true,
-        };
-    }
-    if (status.stats && status.stats.decodedvideo > 0) { // video
-        // if youtube video
-        if (meta['YouTube Start Time'] !== undefined) {
-            output.largeImageKey = 'youtube';
-            output.largeImageText = meta.url;
-        }
-        // if a tv show
-        if (meta.showName) {
-            output.details = meta.showName;
-        }
-
-        if (meta.episodeNumber) {
-            output.state = `Episode ${meta.episodeNumber}`;
-            if (meta.seasonNumber) {
-                output.state += ` - Season ${meta.seasonNumber}`;
-            }
-        } else if (meta.artist) {
-            output.state = meta.artist;
-        } else {
-            output.state = `${(status.date || '')} Video`;
-        }
-    } else if (meta.now_playing) {
-        // if a stream
-        output.state = meta.now_playing;
-    } else if (meta.artist) {
-        // if in an album
-        output.state = meta.artist;
-        // if the song is part of an album
-        if (meta.album) {
-            output.state += ` - ${meta.album}`;
-        }
-        // display track #
-        if (meta.track_number && meta.track_total) {
-            output.partySize = parseInt(meta.track_number, 10);
-            output.partyMax = parseInt(meta.track_total, 10);
-        }
     } else {
-        output.state = status.state;
+        output.endTimestamp = getEndTimestamp(status);
+
+        if (status.information) {
+            meta = status.information.category.meta;
+            // If a video...
+            if (status.stats && status.stats.decodedvideo > 0) {
+                return {
+                    ...output,
+                    ...getVideoDetails(meta)
+                };
+            } else {
+                return {
+                    ...output,
+                    largeImageKey: 'vlc',
+                    ...getSongDetails(meta)
+                };
+            }
+        }
+        return output;
     }
-    end = Math.floor((Date.now() / 1000 + (status.length - status.time)) / status.rate);
-    if (status.state === 'playing') {
-        output.endTimestamp = end;
+}
+
+function getEndTimestamp(status: VLCStatus) {
+    let now = Date.now();
+    let round = 1000;
+    return Math.floor(
+        (now / round + (status.length - status.time)) / status.rate
+    );
+}
+
+// TODO: If the YouTube URL is long enough the Discord RPC server will deny the buffer. We
+//  should find an alternative.
+function getVideoDetails(meta: Meta | any): Presence {
+    let output: Presence = {};
+
+    // If it's a youtube video / song
+    if (meta.url && meta.url.includes('youtube.com')) {
+        output.state = `${meta.title}`;
+        output.largeImageKey = 'youtube';
+        output.largeImageText = meta.url;
+    } else if (meta.showName) {
+        // If it's a show
+        output.state = `${meta.showName}`;
+    } else if (meta.episodeNumber) {
+        output.state = `Episode ${meta.episodeNumber}`;
+        if (meta.seasonNumber) {
+            output.state += ` - Season ${meta.seasonNumber}`;
+        }
+    } else if (meta.artist && meta.title) {
+        output.state = `${meta.artist} - ${meta.title}`;
+    } else if (meta.title) {
+        output.state = meta.title;
+    } else {
+        output.state = meta.filename;
     }
+    if (output.largeImageKey == undefined) {
+        output.largeImageKey = 'vlc';
+    }
+    return output;
+}
+
+function getSongDetails(meta: Meta | any): Presence {
+    let output: Presence = {};
+
+    if (meta.artist && meta.title) { // If both essential metadata properties exist
+        output.state = `${meta.artist} - ${meta.title}`;
+    } else if (meta.title) { // If only the title is provided (usually includes artist)
+        output.state = meta.title;
+    } else if (meta.now_playing) { // If the user is streaming a song
+        output.state = meta.now_playing;
+    } else {
+        output.state = meta.filename;
+    }
+
     return output;
 }

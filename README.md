@@ -6,16 +6,18 @@ Discord rich presence for VLC media player.
 Join us on [Discord](https://discord.gg/3Fu6KHd).
 
 ## Requirements
-- [NodeJS](https://nodejs.org/en/)
+- [Current Version of NodeJS](https://nodejs.org/en/)
 - [VLC](https://www.videolan.org/index.html)
 - [Discord desktop client](https://discordapp.com/)
 - [vlc-discord-rpc](https://github.com/Pigpog/vlc-discord-rpc/releases) (see latest release)
 
 ## Setup
+ -  See [setup.gif](./setup.gif) for a visual guide.
+ 
 Open VLC go-to preferences (`CTRL-P`) show all settings (bottom left) and search for 
 "lua http". You should see "Main Interfaces" there you must check mark the "Web" interface.
-Then go-to Lua which is under "Main Interfaces" and set a password (this is required), and 
-then relaunch VLC. See [setup.gif](./setup.gif) for a visual guide.
+Then go-to Lua which is under "Main Interfaces" and set a password (this is can be anything), and 
+then relaunch VLC.
 
 ### Windows
 Unzip vlc-discord-rpc.zip open the scripts folder and run `setup.bat`. Finally to start
