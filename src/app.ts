@@ -9,24 +9,11 @@
  * @author Dylan Hackworth <https://github.com/dylhack>
  * @author Jared Toomey <https://github.com/pigpog>
  */
-import * as fs                      from 'fs';
-import { update }                   from './rpc';
-import { getPassword, handleError } from './vlc';
+import { update }      from './rpc';
+import { handleError } from './vlc';
 
 const config = require(`${__dirname}/../config/config.json`);
 
-function setup(): string | undefined {
-    let stringifed: string;
-    let password: string | undefined;
-
-    password = getPassword();
-    if (password) {
-        config.vlc.password = password;
-        stringifed = JSON.stringify(config);
-        fs.writeFileSync(`${__dirname}/../config/config.json`, stringifed);
-    }
-    return password;
-}
 
 function main() {
     let first: boolean;
