@@ -1,0 +1,11 @@
+[Unit]
+Description="Discord rich presence for VLC media player."
+ConditionUser=!root
+
+[Service]
+Type=simple
+#Restart=on-failure
+ExecStart=vlc-discord-rpc
+
+[Install]
+WantedBy=default.target

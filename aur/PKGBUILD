@@ -10,18 +10,25 @@ depends=('npm' 'vlc')
 source=(
 	"$url/releases/download/$pkgver/$pkgname-linux.tar.gz"
 	"$pkgname.sh"
+	"$pkgname.service"
 )
 optdepends=('discord: For Rich Presence')
 #install="${pkgname}.install"
 md5sums=(
 	"SKIP"
 	"SKIP"
+	"SKIP"
 )
+
+detach(){
+	pass="lua"
+	sed -i 's/detached: false/detached: true/g' config/config.js
+	sed -i "s/password: ''/password: '$pass'/g" config/config.js
+}
 
 prepare(){
 	cd "$srcdir/$pkgname"
-	#sed -i 's/detached: false/detached: true/g' config/config.js
-	#sed -i 's/npm start//g' start.sh
+	detach
 }
 build() {
 	cd "$srcdir/$pkgname"
@@ -35,6 +42,7 @@ package() {
 	_pkgdir="$pkgdir/opt/$pkgname"
 	mkdir -p "$pkgdir/opt"
 	cp -r "$srcdir/$pkgname" "$_pkgdir"
-	ln -sv "$HOME/.${pkgname}_logs" "$_pkgdir/logs" 
-	install -Dm0755 vlc-discord-rpc.sh "$pkgdir/usr/bin/$pkgname"
+	#ln -sv "$HOME/.${pkgname}_logs" "$_pkgdir/logs" 
+	install -Dm0644 $pkgname.service "$pkgdir/usr/lib/systemd/user/$pkgname.service"
+	install -Dm0755 $pkgname.sh "$pkgdir/usr/bin/$pkgname"
 }
