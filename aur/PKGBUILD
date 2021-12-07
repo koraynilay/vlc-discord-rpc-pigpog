@@ -1,0 +1,40 @@
+# Maintainer: koraynilay <koray.fra@gmail.com>
+pkgname=vlc-discord-rpc
+pkgver=2.3
+pkgrel=1
+pkgdesc="Discord rich presence for VLC media player."
+arch=('x86_64')
+url="https://github.com/Pigpog/vlc-discord-rpc"
+license=('MIT')
+depends=('npm' 'vlc')
+source=(
+	"$url/releases/download/$pkgver/$pkgname-linux.tar.gz"
+	"$pkgname.sh"
+)
+optdepends=('discord: For Rich Presence')
+#install="${pkgname}.install"
+md5sums=(
+	"SKIP"
+	"SKIP"
+)
+
+prepare(){
+	cd "$srcdir/$pkgname"
+	#sed -i 's/detached: false/detached: true/g' config/config.js
+	#sed -i 's/npm start//g' start.sh
+}
+build() {
+	cd "$srcdir/$pkgname"
+	npm install --silent --production
+	if ! [ $? -eq 0 ];then
+		exit 1
+	fi
+}
+
+package() {
+	_pkgdir="$pkgdir/opt/$pkgname"
+	mkdir -p "$pkgdir/opt"
+	cp -r "$srcdir/$pkgname" "$_pkgdir"
+	ln -sv "$HOME/.${pkgname}_logs" "$_pkgdir/logs" 
+	install -Dm0755 vlc-discord-rpc.sh "$pkgdir/usr/bin/$pkgname"
+}
