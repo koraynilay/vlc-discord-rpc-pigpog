@@ -27,7 +27,7 @@ module.exports = {
 
     // If true, VLC will not be opened for you.
     // Note: You must set a password
-    detached: false,
+    detached: true,
 
     // Changes the big icon of the rich presence
     // Some of the available icons are: vlc, vlcflat, vlcblue, vlcneon, vlcxmas
